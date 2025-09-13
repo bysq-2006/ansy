@@ -15,19 +15,45 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import lottie from 'lottie-web';
-import createInitialAnimation, { runInitialAnimation } from '@/utils/Initial-animation';
+import createInitialAnimation from '@/utils/Initial-animation';
+import WheelAdsorption from '@/utils/wheel-adsorption'
+
 const trapezoid = ref(null);
-const Subheading = ref(null);
 const trapezoidDeco = ref(null)
+const Subheading = ref(null);
 const lottieEl = ref(null);
 
 onMounted(() => {
+  const wa = new WheelAdsorption({
+    points: [0, window.innerHeight, 2000], // 你的吸附点
+    duration: 600,                // 动画时长（毫秒）
+    easing: 'easeInOutCubic'      // 缓动类型，可选'linear'、'easeInCubic'、'easeOutCubic'等
+  })
+  window.addEventListener('scroll', trapezoidscroll)
+  runInitialAnimations();
+});
+
+function trapezoidscroll() {
+  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+  const windowHeight = window.innerHeight;
+
+  const progress = Math.min(scrollTop / windowHeight, 1);
+  let width = 1800
+
+  trapezoidDeco.value.style.clipPath = `polygon(-1000px 0, ${2267 - (2267 - width) * progress}px 0, ${1827 - (1827 - width) * progress}px 100%, -1000px 100%)`;
+}
+
+function runInitialAnimations() {
   const animTrapezoid = createInitialAnimation([trapezoidDeco.value, trapezoid.value], { translate: { x: 1200, y: 0 } });
   const animSubheading = createInitialAnimation(Subheading.value, { translate: { x: -600, y: 0 } });
-  const animLottie = createInitialAnimation(lottieEl.value, { translate: { x: 0.20 * window.innerWidth, y: 0 } });
+  const animLottie = createInitialAnimation(lottieEl.value, { translate: { x: 0.22 * window.innerWidth, y: 0 } });
   let aeANSY = null;
+
+  animTrapezoid.init();
+  animSubheading.init();
+  animLottie.init();
 
   setTimeout(() => {
     aeANSY = lottie.loadAnimation({
@@ -35,7 +61,7 @@ onMounted(() => {
       renderer: 'svg',
       loop: false,
       autoplay: true,
-      path: '/ANSY.json' // public 下的资源，Vite 用 / 绝对路径访问
+      path: '/ANSY.json'
     });
 
     aeANSY.addEventListener('DOMLoaded', () => {
@@ -43,15 +69,10 @@ onMounted(() => {
         animSubheading.play(1, 'easeOutCubic');
         animTrapezoid.play(1, 'easeOutCubic', { stagger: 0.2 });
         animLottie.play(1, 'easeOutCubic');
-      }, 1000);
+      }, 1300);
     });
   }, 600);
-
-  animTrapezoid.init();
-  animSubheading.init();
-  animLottie.init();
-  // 你可以后续调用 animTrapezoid.play() 实现入场动画
-});
+}
 </script>
 
 <style scoped>
@@ -71,19 +92,22 @@ onMounted(() => {
 }
 
 .trapezoid-deco {
-  position: absolute;
+  position: fixed;
   left: 0;
   width: 2300px;
   height: 100vh;
   transform: translateX(-1200px);
   background: #fff34b;
-  clip-path: polygon(-1000px 0, 2247px 0, 1807px 100%, -1000px 100%);
+  clip-path: polygon(-1000px 0, 2267px 0, 1827px 100%, -1000px 100%);
   z-index: 1;
 }
 
 .display {
+  position: relative;
   height: 2000px;
   background: linear-gradient(180deg, #fff 0%, #f3f1f5 100%);
+  z-index: -4;
+  background: #0564b2;
 }
 
 .head {
