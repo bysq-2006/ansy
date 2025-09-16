@@ -1,24 +1,42 @@
 <template>
-  <div class="head">
-    <div class="trapezoid" ref="trapezoid"></div>
-    <div class="trapezoid-deco" ref="trapezoidDeco"></div>
-    <div class="left">
-      <div ref="lottieEl" class="lottieEl"></div>
-      <h2 ref="Subheading">活动页</h2>
+  <div class="total">
+    <!-- #083565 -->
+    <div class="head">
+      <div class="trapezoid" ref="trapezoid"></div>
+      <div class="trapezoid-deco" ref="trapezoidDeco"></div>
+      <div class="left">
+        <div ref="lottieEl" class="lottieEl"></div>
+        <h2 ref="Subheading">活动页</h2>
+      </div>
+      <img src="/aisu.png" alt="" class="hero">
     </div>
-    <img src="/aisu.png" alt="" class="hero">
-  </div>
 
-  <div class="display">
-
+    <div class="display">
+      <div v-for="value in activitylist" class="activity" :key="value.id">
+        <div class="box"></div>
+        <div class="point"></div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue';
 import lottie from 'lottie-web';
+import { gsap } from "gsap";
 import createInitialAnimation from '@/utils/Initial-animation';
-import WheelAdsorption from '@/utils/wheel-adsorption'
+const activitylist = ref([
+  { id: 1, name: '活动一', description: '这是活动一的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 2, name: '活动二', description: '这是活动二的描述' },
+  { id: 3, name: '活动三', description: '这是活动三的描述' },
+]);
 
 const trapezoid = ref(null);
 const trapezoidDeco = ref(null)
@@ -26,24 +44,125 @@ const Subheading = ref(null);
 const lottieEl = ref(null);
 
 onMounted(() => {
-  const wa = new WheelAdsorption({
-    points: [0, window.innerHeight, 2000], // 你的吸附点
-    duration: 600,                // 动画时长（毫秒）
-    easing: 'easeInOutCubic'      // 缓动类型，可选'linear'、'easeInCubic'、'easeOutCubic'等
-  })
-  window.addEventListener('scroll', trapezoidscroll)
   runInitialAnimations();
+  window.addEventListener('wheel', onWheel, { passive: false });
+  window.addEventListener('scroll', onScroll, { passive: true });
 });
 
-function trapezoidscroll() {
-  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-  const windowHeight = window.innerHeight;
-
-  const progress = Math.min(scrollTop / windowHeight, 1);
-  let width = 1800
-
-  trapezoidDeco.value.style.clipPath = `polygon(-1000px 0, ${2267 - (2267 - width) * progress}px 0, ${1827 - (1827 - width) * progress}px 100%, -1000px 100%)`;
+function onScroll() {
+  // 只在活动页状态下吸附
+  if (inActivity) {
+    const min = window.innerWidth / 2;
+    const max = window.innerWidth;
+    if (window.scrollX > min && window.scrollX < max) {
+      // 平滑吸附到活动页
+      window.scrollTo({ left: window.innerWidth, behavior: 'smooth' });
+      targetScrollLeft = window.innerWidth;
+    }
+  }
 }
+
+// 状态：是否已进入活动页
+let inActivity = false;
+// 防抖：动画进行中
+let busy = false;
+// 平滑滚动相关
+let targetScrollLeft = 0;
+let animating = false;
+
+function onWheel(e) {
+  e.preventDefault();
+  if (busy) return;
+  const delta = e.deltaY;
+  // 进入
+  if (!inActivity && delta > 1 && window.scrollX < window.innerWidth / 2) {
+    busy = true;
+    playEnterActivity(() => { busy = false; inActivity = true; });
+    return;
+  }
+  // 返回
+  if (inActivity && delta < -1 && window.scrollX > window.innerWidth - 100 && window.scrollX < window.innerWidth + 10) {
+    busy = true;
+    playBackToHead(() => { busy = false; inActivity = false; });
+    return;
+  }
+  // 普通平滑横向滚动
+  targetScrollLeft += delta;
+  const max = document.documentElement.scrollWidth - window.innerWidth;
+  if (targetScrollLeft < 0) targetScrollLeft = 0;
+  else if (targetScrollLeft > max) targetScrollLeft = max;
+  if (!animating) {
+    animating = true;
+    requestAnimationFrame(animateScroll);
+  }
+}
+
+// 平滑滚动动画函数
+function animateScroll() {
+  const current = window.scrollX;
+  const diff = targetScrollLeft - current;
+  // 差值很小就结束
+  if (Math.abs(diff) < 0.5) {
+    window.scrollTo({ left: targetScrollLeft });
+    animating = false;
+    return;
+  }
+  // 采用缓动比例（指数逼近），0.15~0.25 可调
+  const step = diff * 0.12; // 调整速度/阻尼
+  window.scrollTo({ left: current + step });
+  requestAnimationFrame(animateScroll);
+}
+
+function playEnterActivity(done) {
+  let switched = false;
+  gsap.to([trapezoidDeco.value], {
+    x: 1800,
+    duration: 1,
+    ease: 'power2.inOut',
+    onUpdate: () => {
+      if (!switched) {
+        const x = gsap.getProperty(trapezoidDeco.value, 'x');
+        if (x >= 0) {
+          switched = true;
+          window.scrollTo({ left: window.innerWidth });
+          targetScrollLeft = window.innerWidth; // 同步目标
+        }
+      }
+    },
+    onComplete: () => { done && done(); }
+  });
+  gsap.to([lottieEl.value, Subheading.value], {
+    x: -1200,
+    duration: 1,
+    ease: 'power2.inOut'
+  });
+}
+
+function playBackToHead(done) {
+  let switched = false;
+  gsap.to([trapezoidDeco.value], {
+    x: -1200,
+    duration: 1,
+    ease: 'power2.inOut',
+    onUpdate: () => {
+      if (!switched) {
+        const x = gsap.getProperty(trapezoidDeco.value, 'x');
+        if (x <= 0) {
+          switched = true;
+          window.scrollTo({ left: 0 });
+          targetScrollLeft = 0; // 同步目标
+        }
+      }
+    },
+    onComplete: () => { done && done(); }
+  });
+  gsap.to([lottieEl.value, Subheading.value], {
+    x: 0,
+    duration: 1,
+    ease: 'power2.inOut'
+  });
+}
+
 
 function runInitialAnimations() {
   const animTrapezoid = createInitialAnimation([trapezoidDeco.value, trapezoid.value], { translate: { x: 1200, y: 0 } });
@@ -76,6 +195,38 @@ function runInitialAnimations() {
 </script>
 
 <style scoped>
+.display .box {
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  width: 300px;
+  height: 500px;
+}
+
+.display .point {
+  width: 20px;
+  height: 20px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  margin: 0 auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.display {
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+  flex-shrink: 0; /* 关键：不允许被压缩 */
+  min-width: 100vw;
+  background-color: #083565;
+}
+
 .lottieEl {
   height: 200px;
   margin-bottom: 100px;
@@ -86,9 +237,10 @@ function runInitialAnimations() {
   left: 0;
   width: 1100px;
   height: 100vh;
-  background: linear-gradient(135deg, #ff9800 0%, #ffc966 100%);
+  background: #f7eb48;
   clip-path: polygon(0 0, 100% 0, 60% 100%, 0 100%);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.18);
+  z-index: 1;
 }
 
 .trapezoid-deco {
@@ -98,26 +250,19 @@ function runInitialAnimations() {
   height: 100vh;
   transform: translateX(-1200px);
   background: #fff34b;
-  clip-path: polygon(-1000px 0, 2267px 0, 1827px 100%, -1000px 100%);
+  clip-path: polygon(-1000px 0, 2287px 0, 1847px 100%, -1000px 100%);
   z-index: 1;
 }
 
-.display {
-  position: relative;
-  height: 2000px;
-  background: linear-gradient(180deg, #fff 0%, #f3f1f5 100%);
-  z-index: -4;
-  background: #0564b2;
-}
-
 .head {
+  min-width: 100vw;
   padding: 6.25vw;
   display: flex;
   align-items: center;
   height: 100vh;
   position: relative;
   overflow: hidden;
-  z-index: -2;
+  z-index: 0;
   background: #0564b2;
 }
 
@@ -147,5 +292,32 @@ h2 {
   pointer-events: none;
   opacity: 1;
   filter: drop-shadow(0 20px 40px rgb(255, 255, 255));
+}
+
+.total {
+  display: flex;
+}
+
+.head {
+  pointer-events: none;
+  /* 禁用所有子元素的鼠标事件 */
+}
+</style>
+
+<style>
+html {
+  margin: 0;
+  height: 100%;
+  overflow: auto;
+  /* 允许滚动 */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE / Edge */
+}
+
+html::-webkit-scrollbar {
+  scrollbar-width: none;
+  /* Chrome / Safari / Edge(Chromium) */
 }
 </style>
