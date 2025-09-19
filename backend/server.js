@@ -8,16 +8,21 @@ import rateLimit from 'express-rate-limit';
 
 dotenv.config(); //配置
 
+import multer from 'multer';
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.API_KEY || 'your-secret-api-key-here';
 
 // 文档存储目录
 const DOCUMENTS_DIR = path.join(process.cwd(), 'documents');
+const UPLOADS_DIR = path.join(DOCUMENTS_DIR, 'uploads');
 const INDEX_FILE = path.join(DOCUMENTS_DIR, 'index.json');
 
 // 确保文档目录存在
+
 await fs.ensureDir(DOCUMENTS_DIR);
+await fs.ensureDir(UPLOADS_DIR);
 
 // 如果索引文件不存在，创建一个空的
 if (!(await fs.pathExists(INDEX_FILE))) {
@@ -31,6 +36,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 静态资源访问：图片上传目录
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // 速率限制
 const limiter = rateLimit({
@@ -75,6 +83,43 @@ const writeIndex = async (index) => {
 };
 
 // ==================== 公开接口（不需要密钥） ====================
+
+// ==================== 图片上传接口（Vditor） ====================
+// 使用 multer 处理图片上传
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage });
+
+// Vditor 图片上传接口（无需鉴权）
+app.post('/api/upload', upload.array('file[]'), (req, res) => {
+  const files = req.files;
+  if (!files || files.length === 0) {
+    return res.status(400).json({
+      msg: '未收到文件',
+      code: 1,
+      data: { errFiles: [], succMap: {} }
+    });
+  }
+  const succMap = {};
+  const host = req.protocol + '://' + req.get('host');
+  files.forEach(file => {
+    succMap[file.originalname] = `${host}/uploads/${file.filename}`;
+  });
+  res.json({
+    msg: '',
+    code: 0,
+    data: {
+      errFiles: [],
+      succMap
+    }
+  });
+});
 
 // 获取文档列表
 app.get('/api/documents', async (req, res) => {
