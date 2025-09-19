@@ -194,7 +194,7 @@ function runInitialAnimations() {
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 16px;
-  margin: 16px;
+  margin: 24px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 
@@ -218,6 +218,7 @@ function runInitialAnimations() {
   box-sizing: border-box;
   flex-shrink: 0;
   /* 关键：不允许被压缩 */
+  padding: 24px;
   min-width: 100vw;
   background-color: #083565;
 }

@@ -12,6 +12,11 @@ const router = createRouter({
       path: '/management',
       name: 'Management',
       component: () => import('../content/management.vue'),
+    },
+    {
+      path: '/management/add-md',
+      name: 'AddMd',
+      component: () => import('../content/mange/add-md.vue'),
     }
   ],
 })
