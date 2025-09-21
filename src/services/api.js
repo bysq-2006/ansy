@@ -1,5 +1,6 @@
 // API基础配置和文档管理服务
 import axios from 'axios'
+import { useDocumentTemplate } from '@/stores/document'
 
 // 创建axios实例
 const api = axios.create({
@@ -10,15 +11,17 @@ const api = axios.create({
   }
 })
 
-// API密钥（在生产环境中应该从环境变量获取）
-const API_KEY = '123'
+// 不在这里直接取值，拦截器里动态读取，保证用户后输入的 key 生效
 
 // 请求拦截器 - 为需要认证的请求添加API密钥
 api.interceptors.request.use(
   (config) => {
     // 如果是需要认证的请求（POST, PUT, DELETE），添加API密钥
-    if (['post', 'put', 'delete'].includes(config.method?.toLowerCase())) {
-      config.headers['X-API-Key'] = API_KEY
+    if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
+      const store = useDocumentTemplate()
+      if (store.apikey) {
+        config.headers['X-API-Key'] = store.apikey
+      }
     }
     return config
   },
