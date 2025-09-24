@@ -63,7 +63,7 @@
             <input v-model="editingDoc.title" type="text" class="form-input" placeholder="请输入文档标题">
           </div>
           <div class="form-group">
-            <label>图片路径:</label>
+            <label>描述:</label>
             <input v-model="editingDoc.description" type="text" class="form-input" placeholder="请输入文档描述">
           </div>
           <div class="form-group">

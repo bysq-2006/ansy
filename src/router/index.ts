@@ -18,6 +18,11 @@ const router = createRouter({
       name: 'AddMd',
       component: () => import('../content/mange/add-md.vue'),
     }
+    ,{
+      path: '/documents/:id',
+      name: 'ContentPage',
+      component: () => import('../content/contentPage.vue')
+    }
   ],
 })
 

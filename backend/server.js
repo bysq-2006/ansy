@@ -131,6 +131,8 @@ app.get('/api/documents', async (req, res) => {
         id: doc.id,
         title: doc.title,
         description: doc.description,
+        imageUrl: doc.imageUrl || null,
+        coverUrl: doc.coverUrl || '',
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
         size: doc.size
@@ -166,6 +168,8 @@ app.get('/api/documents/:id', async (req, res) => {
       success: true,
       data: {
         ...document,
+        imageUrl: document.imageUrl || null,
+        coverUrl: document.coverUrl || '',
         content
       }
     });
@@ -183,7 +187,7 @@ app.get('/api/documents/:id', async (req, res) => {
 // 上传文档
 app.post('/api/documents', requireAuth, async (req, res) => {
   try {
-    const { title, content, description = '' } = req.body;
+    const { title, content, description = '', imageUrl = '', coverUrl = '' } = req.body;
     
     if (!title || !content) {
       return res.status(400).json({ 
@@ -209,6 +213,8 @@ app.post('/api/documents', requireAuth, async (req, res) => {
       id,
       title: title.trim(),
       description: description.trim(),
+      imageUrl: imageUrl ? imageUrl.trim() : '',
+      coverUrl: coverUrl ? coverUrl.trim() : '',
       filename,
       size: stats.size,
       createdAt: new Date().toISOString(),
@@ -236,7 +242,7 @@ app.post('/api/documents', requireAuth, async (req, res) => {
 app.put('/api/documents/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, description } = req.body;
+    const { title, content, description, imageUrl, coverUrl } = req.body;
     
     const index = await readIndex();
     const documentIndex = index.findIndex(doc => doc.id === id);
@@ -263,6 +269,8 @@ app.put('/api/documents/:id', requireAuth, async (req, res) => {
     if (description !== undefined) {
       document.description = description.trim();
     }
+    if (imageUrl !== undefined) document.imageUrl = imageUrl.trim();
+    if (coverUrl !== undefined) document.coverUrl = coverUrl.trim();
     
     // 更新文件大小和修改时间
     const stats = await fs.stat(filePath);

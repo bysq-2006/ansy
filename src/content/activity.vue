@@ -1,7 +1,7 @@
 <template>
   <div class="total">
-    <!-- #083565 -->
-    <div class="head">
+    <!-- 在手机端隐藏 head：最小侵入式改动 -->
+    <div class="head" v-if="!isMobile">
       <div class="trapezoid" ref="trapezoid"></div>
       <div class="trapezoid-deco" ref="trapezoidDeco"></div>
       <div class="left">
@@ -12,36 +12,92 @@
     </div>
 
     <div class="display">
-      <div v-for="value in activitylist" class="activity" :key="value.id">
-        <div class="box"></div>
-        <div class="text">
-          {{ value.title }}
+      <template v-if="activitylist && activitylist.length">
+        <div v-for="value in activitylist" class="activity" :key="value.id">
+          <div class="box" @click="toweb(value.id)">
+            <img :src="value.coverUrl" alt="" class="cover">
+            <h3>
+              {{ value.title }}
+            </h3>
+            <p>
+              {{ value.description }}
+            </p>
+            <svg width="300" height="500" viewBox="0 0 300 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="
+                M 0 200
+                Q 0 250 50 250
+                L 250 250
+                Q 300 250 300 300
+                L 300 500
+                L 0 500
+                Z
+              " fill="#ffffff" fill-opacity="0.9"/>
+            </svg>
+          </div>
+          <div class="text">
+            {{ new Date(value.createdAt).toLocaleString() }}
+          </div>
         </div>
-      </div>
+      </template>
+      <div v-else class="empty-tip">{{ loading ? '加载中…' : (errorMsg || '暂无活动') }}</div>
     </div>
   </div>
 </template>
 
 <script setup name="Activity">
-import { onMounted, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { documentService } from '@/services/api'
 import lottie from 'lottie-web';
 import { gsap } from "gsap";
 import createInitialAnimation from '@/utils/Initial-animation';
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const trapezoid = ref(null);
 const trapezoidDeco = ref(null)
 const Subheading = ref(null);
 const lottieEl = ref(null);
 
-const activitylist = ref(null)
+const activitylist = ref([])
+const loading = ref(true)
+const errorMsg = ref('')
+// 移动端标记
+const isMobile = ref(false)
 
 onMounted(async () => {
-  activitylist.value = (await documentService.getDocuments()).data
+  // 基础检测：宽度 + UA，保持最小风险
+  isMobile.value = (window.innerWidth <= 768) || /Mobile|Android|iP(hone|od|ad)/i.test(navigator.userAgent);
+  try {
+    const res = await documentService.getDocuments();
+    activitylist.value = res?.data || [];
+  } catch (e) {
+    console.error('[activity] 获取活动列表失败:', e);
+    errorMsg.value = '加载失败';
+  } finally {
+    loading.value = false;
+  }
+  if (isMobile.value) {
+    document.querySelector('.display').style.zIndex = '3';
+    // 手机端：不执行初始动画 / 监听，交互保持纵向滚动
+    return;
+  }
   runInitialAnimations();
   window.addEventListener('wheel', onWheel, { passive: false });
   window.addEventListener('scroll', onScroll, { passive: true });
 });
+
+onBeforeUnmount(() => {
+  if (!isMobile.value) {
+    window.removeEventListener('wheel', onWheel, { passive: false });
+    window.removeEventListener('scroll', onScroll, { passive: true });
+  }
+});
+
+function toweb(id) {
+  // 使用 vue-router 跳转到指定文档页面
+  const routeData = router.resolve({ name: 'ContentPage', params: { id } });
+  window.open(routeData.href, '_blank');
+}
 
 function onScroll() {
   // 只在活动页状态下吸附
@@ -186,23 +242,77 @@ function runInitialAnimations() {
     });
   }, 600);
 }
+
+
 </script>
 
 <style scoped>
-.display .box {
+.activity .cover {
+  position: absolute;
+  height: 100%;
+  top: 0;
+  left: 0;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.activity .box h3 {
+  position: relative;
+  font-size: 2em;
+  font-weight: bold;
+  color: #0b4380;
+  margin-bottom: 16px;
+  font-family: 'Baskerville Old Face', serif;
+  letter-spacing: 1px;
+  z-index: 2;
+}
+
+.activity .box p {
+  position: relative;
+  font-size: 1.15em;
+  color: #333;
+  line-height: 1.7;
+  margin-bottom: 0;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  max-width: 260px;
+  word-break: break-all;
+  white-space: normal;
+  z-index: 2;
+}
+
+.activity .box svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+.activity .box {
+  position: relative;
   background-color: #f0f0f0;
   border: 1px solid #ccc;
   border-radius: 8px;
-  padding: 16px;
   margin: 24px;
+  overflow: hidden;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 20px;
+  padding-top: 270px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
   width: 300px;
   height: 500px;
 }
 
-.display .text {
+.activity .box:hover {
+  cursor: pointer;
+  transform: translateY(-18px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.activity .text {
   color: white;
   text-align: center;
   font-family: 'Baskerville Old Face', serif;
@@ -221,6 +331,8 @@ function runInitialAnimations() {
   padding: 24px;
   min-width: 100vw;
   background-color: #083565;
+  /* 原为 -1，会在隐藏 head 后在某些移动端被放到点击层级后面，导致无法触发点击 */
+  z-index: -1;
 }
 
 .lottieEl {

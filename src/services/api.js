@@ -4,7 +4,7 @@ import { useDocumentTemplate } from '@/stores/document'
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: 'http://localhost:3001/api',
+  baseURL: '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -56,11 +56,13 @@ export const documentService = {
 
   // 上传新文档（需要密钥）
   async createDocument(documentData) {
-    const { title, content, description = '' } = documentData
+    const { title, content, description = '', imageUrl = '', coverUrl = '' } = documentData
     return api.post('/documents', {
       title: title.trim(),
       content,
-      description: description.trim()
+      description: description.trim(),
+      imageUrl: imageUrl.trim(),
+      coverUrl: coverUrl.trim()
     })
   },
 
@@ -70,6 +72,8 @@ export const documentService = {
     if (documentData.title !== undefined) updates.title = documentData.title.trim()
     if (documentData.content !== undefined) updates.content = documentData.content
     if (documentData.description !== undefined) updates.description = documentData.description.trim()
+    if (documentData.imageUrl !== undefined) updates.imageUrl = documentData.imageUrl.trim()
+    if (documentData.coverUrl !== undefined) updates.coverUrl = documentData.coverUrl.trim()
     
     return api.put(`/documents/${id}`, updates)
   },
